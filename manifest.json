@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "PDF Comfort Reader",
+  "version": "1.0",
+  "description": "Transforms PDF viewing for enhanced readability and eye comfort.",
+
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "options/options.html"
+  },
+  "options_page": "options/options.html",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "viewer/*",
+        "pdfjs/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

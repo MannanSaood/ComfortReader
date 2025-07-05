@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>PDF Comfort Reader Settings</title>
+    <link rel="stylesheet" href="options.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Comfort Reader Settings</h1>
+
+        <section class="setting-group" id="background-warmth-section">
+            <h2>Background Warmth</h2>
+            <div class="button-grid">
+                <button class="color-btn" id="creamBtn" data-color="#FBF0E0">Cream</button>
+                <button class="color-btn" id="sepiaBtn" data-color="#F4EADF">Sepia</button>
+                <button class="color-btn" id="lightTanBtn" data-color="#EADDCA">Light Tan</button>
+                <button class="color-btn" id="darkWarmBtn" data-color="#C2B280">Dark Warm</button>
+                <button class="color-btn" id="darkGrayBtn" data-color="#333333">Dark Gray</button> <button class="color-btn" id="blackBtn" data-color="#000000">Black</button>     </div>
+            <div class="custom-color-row">
+                <label for="customColorInput">Custom Color:</label>
+                <input type="color" id="customColorPicker" value="#FFFFFF">
+                <input type="text" id="customColorInput" placeholder="#HEX or named color">
+                <button id="applyCustomColorBtn">Apply</button>
+            </div>
+        </section>
+
+        <section class="setting-group" id="filters-section">
+            <h2>Filters</h2>
+            <div class="setting-item">
+                <label for="blueLightFilterToggle">Blue Light Filter:</label>
+                <input type="checkbox" id="blueLightFilterToggle">
+            </div>
+            <div class="setting-item">
+                <label for="blueLightIntensitySlider">Intensity:</label>
+                <input type="range" id="blueLightIntensitySlider" min="0" max="100" value="50">
+                <span id="blueLightIntensityValue">50%</span>
+            </div>
+            <div class="setting-item">
+                <label for="contrastLevelSlider">Contrast:</label>
+                <input type="range" id="contrastLevelSlider" min="0" max="100" value="50">
+                <span id="contrastLevelValue">50%</span>
+            </div>
+        </section>
+
+        <section class="setting-group" id="scope-section">
+            <h2>Apply Settings</h2>
+            <div class="setting-item">
+                <input type="radio" id="applyAllRadio" name="scope" value="all">
+                <label for="applyAllRadio">To All PDFs</label>
+            </div>
+            <div class="setting-item">
+                <input type="radio" id="applySelectedRadio" name="scope" value="selected">
+                <label for="applySelectedRadio">Only on Selected Sites</label>
+            </div>
+            <div class="site-list-container">
+                <input type="text" id="siteInput" placeholder="Add current site (e.g., example.com)">
+                <button id="addSiteBtn">Add Site</button>
+                <ul id="siteList"></ul>
+            </div>
+        </section>
+
+        <button id="saveSettingsBtn" class="save-btn">Save Settings</button>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

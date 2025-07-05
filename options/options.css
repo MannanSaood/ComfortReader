@@ -1,0 +1,345 @@
+/* options/options.css */
+
+:root {
+    --primary-color: #6200EE; /* Deep purple for actions, good in dark mode */
+    --primary-hover-color: #3700B3;
+    --background-dark: #121212; /* Very dark background */
+    --surface-color: #1E1E1E; /* Slightly lighter surface for cards/containers */
+    --text-color-light: #E0E0E0; /* Light gray for main text */
+    --text-color-medium: #B0B0B0; /* Muted gray for secondary text */
+    --border-color: #333333; /* Darker border */
+    --button-bg-default: #333333;
+    --button-text-default: var(--text-color-light);
+    --button-bg-active: var(--primary-color);
+    --button-text-active: #fff;
+    --focus-ring-color: rgba(98, 0, 238, 0.5); /* Semi-transparent primary */
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--background-dark);
+    color: var(--text-color-light);
+    font-size: 14px;
+    min-width: 300px;
+    max-height: 550px;
+    overflow-y: auto;
+}
+
+.container {
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Darker shadow for contrast */
+    padding: 25px;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-color-light);
+    margin-top: 25px;
+    margin-bottom: 15px;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 8px;
+}
+
+.setting-group {
+    margin-bottom: 30px;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.color-btn {
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--button-bg-default);
+    color: var(--button-text-default);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.color-btn:hover {
+    background-color: #444444; /* Slightly lighter gray on hover */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.color-btn.active {
+    background-color: var(--button-bg-active);
+    color: var(--button-text-active);
+    border-color: var(--primary-color);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom Color Row */
+.custom-color-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.custom-color-row label {
+    white-space: nowrap;
+    color: var(--text-color-light); /* Ensure label is light */
+}
+
+#customColorPicker {
+    width: 40px;
+    height: 30px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 0;
+    cursor: pointer;
+    background: none;
+}
+
+/* Hide default color picker dropdown arrow in some browsers for consistency */
+#customColorPicker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+#customColorPicker::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+
+#customColorInput {
+    flex-grow: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 14px;
+    color: var(--text-color-light); /* Text color for input */
+    background-color: var(--button-bg-default); /* Dark background for input */
+}
+
+#customColorInput:focus,
+#siteInput:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--focus-ring-color);
+}
+
+#applyCustomColorBtn,
+#addSiteBtn {
+    padding: 8px 15px;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+#applyCustomColorBtn:hover,
+#addSiteBtn:hover {
+    background-color: var(--primary-hover-color);
+}
+
+/* Setting Items (for toggles, sliders, radios) */
+.setting-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+.setting-item label {
+    flex-grow: 1;
+    font-weight: 400;
+    color: var(--text-color-light); /* Ensure labels are light */
+}
+
+/* Checkbox and Radio styling */
+input[type="checkbox"],
+input[type="radio"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    transition: all 0.2s ease;
+    background-color: var(--button-bg-default); /* Dark background for unchecked */
+}
+
+input[type="radio"] {
+    border-radius: 50%;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Fix for the checkmark! */
+input[type="checkbox"]:checked::after {
+    content: '\2713'; /* Unicode CHECK MARK */
+    font-size: 14px; /* Adjust size if needed */
+    color: #fff; /* White color for the tick */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Centered */
+    /* Ensure font-family can render it, default should be fine, but can specify 'Arial Unicode MS', etc. */
+    line-height: 1; /* Helps with vertical alignment */
+}
+
+/* Slider Styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 150px;
+    height: 8px;
+    background: var(--border-color); /* Darker track */
+    outline: none;
+    border-radius: 5px;
+    flex-shrink: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s ease;
+    border: none;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb,
+input[type="range"]:hover::-moz-range-thumb {
+    background: var(--primary-hover-color);
+}
+
+#blueLightIntensityValue,
+#contrastLevelValue {
+    width: 40px;
+    text-align: right;
+    font-weight: 500;
+    color: var(--text-color-light); /* Light text for values */
+}
+
+/* Site List Styling */
+.site-list-container {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--border-color);
+}
+
+#siteInput {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 14px;
+    width: calc(100% - 80px);
+    margin-right: 10px;
+    color: var(--text-color-light); /* Text color for input */
+    background-color: var(--button-bg-default); /* Dark background for input */
+}
+
+#siteList {
+    list-style: none;
+    padding: 0;
+    margin-top: 15px;
+    max-height: 120px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--button-bg-default); /* Dark background for list */
+}
+
+#siteList li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color-light); /* Light text for list items */
+}
+
+#siteList li:last-child {
+    border-bottom: none;
+}
+
+.remove-site-btn {
+    background-color: #d32f2f; /* Darker red for remove */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.remove-site-btn:hover {
+    background-color: #b71c1c; /* Even darker red on hover */
+}
+
+/* Save Button */
+.save-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    margin-top: 25px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Slightly more prominent shadow */
+}
+
+.save-btn:hover {
+    background-color: var(--primary-hover-color);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
+}
+
+.save-btn:active {
+    background-color: #4a148c; /* Darker primary on active */
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

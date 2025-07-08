@@ -4,12 +4,129 @@
     <title>PDF Comfort Reader</title>
     <meta charset="utf-8">
     <link rel="stylesheet" href="viewer.css">
-    
+    <style>
+      #controls {
+        padding: 18px 0 10px 0;
+        text-align: center;
+        background: #232323;
+        color: #eee;
+        border-bottom: 1px solid #444;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 1.08em;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      #controls label {
+        margin: 0 18px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+      #zoom-slider {
+        vertical-align: middle;
+        width: 120px;
+        margin: 0 8px;
+      }
+      #zoom-input {
+        width: 48px;
+        margin-left: 8px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #555;
+        background: #181818;
+        color: #eee;
+        font-size: 1em;
+        text-align: right;
+      }
+      #controls input[type="checkbox"] {
+        accent-color: #7b5cff;
+        transform: scale(1.2);
+        margin-right: 4px;
+      }
+      #controls span {
+        font-weight: 600;
+        margin-left: 2px;
+      }
+      #sidebar-preview {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 100%;
+        background: #121212;
+        color: #eee;
+        border-left: 1px solid #444;
+        padding: 10px;
+        overflow-y: auto;
+        display: none;
+        box-shadow: -2px 0 8px rgba(0,0,0,0.4);
+      }
+      #sidebar-content {
+        /* Add any specific styles for the sidebar content here */
+      }
+      #top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 18px;
+        background: #181818;
+        color: #eee;
+        border-bottom: 1px solid #444;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 1em;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      #top-bar button {
+        background: none;
+        border: none;
+        color: #eee;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 8px;
+        margin: 0 4px;
+        border-radius: 4px;
+        transition: background 0.3s;
+      }
+      #top-bar button:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      #top-bar #page-info {
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+      }
+      #top-bar #page-number {
+        width: 48px;
+        margin: 0 4px;
+        padding: 2px 6px;
+        border: 1px solid #555;
+        border-radius: 4px;
+        background: #181818;
+        color: #eee;
+        text-align: center;
+      }
+    </style>
     </head>
 <body>
+  <div id="top-bar">
+    <button id="sidebar-toggle">☰</button>
+    <button id="prev-page">‹</button>
+    <input type="number" id="page-number" min="1" value="1">
+    <span id="page-count">/ 1</span>
+    <button id="next-page">›</button>
+    <label><input type="checkbox" id="invert-toggle"> Invert</label>
+    <label><input type="checkbox" id="grayscale-toggle"> Grayscale</label>
+    <button id="rotate-btn">⟳</button>
+    <button id="download-btn">⬇</button>
+  </div>
+  <div id="sidebar-preview">
+    <div id="sidebar-content"></div>
+  </div>
   <div id="pdf-container"></div>
   <div id="loading-message"></div>
-
-    <script type="module" src="viewer.js"></script>
+  <script type="module" src="viewer.js"></script>
 </body>
 </html>

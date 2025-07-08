@@ -17,119 +17,135 @@ const loadingMessage = document.getElementById('loading-message');
 
 let currentSettings = {};
 let isRendering = false; // Add this at the top (global scope)
+let zoomLevel = 1;
+let invertColors = false;
+let grayscale = false;
+let bookmarkedPage = null;
+let firstLoad = true; // Track if it's the first load
+let sidebarThumbnailsRendered = false;
+let thumbnailCache = [];
+const renderedPages = {};
 
-// Function to fetch and apply settings
-async function loadAndApplySettings() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['warmColor', 'contrastLevel', 'blueLightFilter', 'blueLightIntensity', 'scope', 'siteList'], function(settings) {
-            currentSettings = settings;
-            console.log('Loaded settings:', currentSettings);
+let currentPage = 1;
+let totalPages = 1;
+let rotation = 0;
+let pdfDoc = null;
 
-            // Apply global background color to the viewer's body/container
-            const bgColor = currentSettings.warmColor || '#FBF0E0'; // Default warm cream
-            document.body.style.backgroundColor = bgColor;
-            pdfContainer.style.backgroundColor = bgColor; // Ensure container also has it
+// Load PDF and render sidebar + first page
+async function loadPdf(url) {
+    loadingMessage.textContent = 'Loading PDF...';
+    loadingMessage.style.display = 'block';
+    pdfDoc = await pdfjsLib.getDocument(url).promise;
+    totalPages = pdfDoc.numPages;
+    document.getElementById('page-count').textContent = `/ ${totalPages}`;
+    await renderSidebarThumbnails(pdfDoc, currentPage);
+    await renderCurrentPage();
+    loadingMessage.style.display = 'none';
+}
 
-            // Set CSS variables based on settings
-            document.body.style.setProperty('--contrast-value', currentSettings.contrastLevel + '%');
-            document.body.style.setProperty('--brightness-value', (200 - currentSettings.contrastLevel) + '%'); // Inverse brightness slightly for better contrast feel
+// Render only the current page
+async function renderCurrentPage() {
+    const pdfContainer = document.getElementById('pdf-container');
+    pdfContainer.innerHTML = '';
+    const page = await pdfDoc.getPage(currentPage);
+    const viewport = page.getViewport({ scale: zoomLevel, rotation });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
 
-            if (currentSettings.blueLightFilter) {
-                // These values can be fine-tuned. 0.3 sepia, -15deg hue-rotate is a common starting point
-                // Intensity can scale these values.
-                const sepiaVal = (currentSettings.blueLightIntensity / 100) * 0.3; // Max 0.3 sepia
-                const hueRotateVal = (currentSettings.blueLightIntensity / 100) * -15; // Max -15 deg hue-rotate
-                document.body.style.setProperty('--blue-light-sepia', sepiaVal);
-                document.body.style.setProperty('--blue-light-hue-rotate', hueRotateVal + 'deg');
-            } else {
-                document.body.style.setProperty('--blue-light-sepia', '0');
-                document.body.style.setProperty('--blue-light-hue-rotate', '0deg');
-            }
+    let filter = '';
+    if (invertColors) filter += ' invert(1)';
+    if (grayscale) filter += ' grayscale(1)';
+    canvas.style.filter = filter.trim();
 
-            resolve();
+    pdfContainer.appendChild(canvas);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+    document.getElementById('page-number').value = currentPage;
+    highlightSidebarThumbnail(currentPage);
+}
+
+// Sidebar thumbnails
+async function renderSidebarThumbnails(pdf, selectedPage) {
+    const sidebarContent = document.getElementById('sidebar-content');
+    sidebarContent.innerHTML = '';
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 0.18 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.className = 'sidebar-thumb' + (pageNum === selectedPage ? ' selected' : '');
+
+        let filter = '';
+        if (invertColors) filter += ' invert(1)';
+        if (grayscale) filter += ' grayscale(1)';
+        canvas.style.filter = filter.trim();
+
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        canvas.addEventListener('click', () => {
+            currentPage = pageNum;
+            renderCurrentPage();
+            highlightSidebarThumbnail(pageNum);
         });
+        sidebarContent.appendChild(canvas);
+    }
+}
+
+function highlightSidebarThumbnail(pageNum) {
+    document.querySelectorAll('.sidebar-thumb').forEach((thumb, idx) => {
+        thumb.classList.toggle('selected', idx + 1 === pageNum);
     });
 }
 
-// Function to render the PDF
-async function renderPdf(url) {
-    if (isRendering) return; // Prevent duplicate renders
-    isRendering = true;
-
-    if (!url) {
-        loadingMessage.textContent = 'No PDF URL provided.';
-        isRendering = false;
-        return;
+// Navigation controls
+document.getElementById('prev-page').onclick = () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderCurrentPage();
     }
-
-    // Save scroll position
-    const prevScroll = pdfContainer.scrollTop || window.scrollY;
-
-    loadingMessage.textContent = 'Loading PDF...';
-    pdfContainer.innerHTML = ''; // Clear previous content
-
-    await loadAndApplySettings(); // Load settings before rendering
-
-    try {
-        // Use pdfjsLib directly now that it's imported in this module
-        const loadingTask = pdfjsLib.getDocument(url);
-        const pdf = await loadingTask.promise;
-
-        loadingMessage.textContent = `Rendering ${pdf.numPages} pages...`;
-
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 1.5 }); // Adjust scale as needed
-
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            // Apply filters for contrast and blue light reduction directly to canvas via CSS variables
-            canvas.style.filter = `
-                sepia(var(--blue-light-sepia, 0))
-                hue-rotate(var(--blue-light-hue-rotate, 0deg))
-                contrast(var(--contrast-value, 100%))
-                brightness(var(--brightness-value, 100%))
-            `;
-
-            pdfContainer.appendChild(canvas);
-
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
-            };
-            await page.render(renderContext).promise;
-
-            // Optional: If you want selectable text, PDF.js can also render a text layer.
-            // This is more complex to implement and style correctly for readability enhancements.
-            // For now, focusing on canvas rendering.
-        }
-        loadingMessage.style.display = 'none'; // Hide loading message
-
-        // Restore scroll position
-        pdfContainer.scrollTop = prevScroll;
-        window.scrollTo(0, prevScroll);
-    } catch (error) {
-        console.error('Error rendering PDF:', error);
-        let errorMessage = 'Error loading or rendering PDF: ' + error.message;
-
-        // Check if it's a 403 Forbidden error
-        if (error.name === 'FetchError' && error.message.includes('403')) { // Or a more robust check based on PDF.js error object structure
-             errorMessage = "Error: Access to this PDF is forbidden (403). The website may be blocking direct access or require login. Please try downloading the PDF first, then open the downloaded file.";
-        } else if (error.message.includes('403') || (error.response && error.response.status === 403)) {
-            errorMessage = "Error: Access to this PDF is forbidden (403). The website may be blocking direct access or require login. Please try downloading the PDF first, then open the downloaded file.";
-        }
-        loadingMessage.textContent = errorMessage;
-    } finally {
-        isRendering = false; // Allow future renders
+};
+document.getElementById('next-page').onclick = () => {
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderCurrentPage();
     }
-}
+};
+document.getElementById('page-number').addEventListener('change', (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (val >= 1 && val <= totalPages) {
+        currentPage = val;
+        renderCurrentPage();
+    }
+});
 
-// Start rendering when the viewer page loads
+// Invert, Grayscale, Rotate, Download
+document.getElementById('invert-toggle').addEventListener('change', (e) => {
+    invertColors = e.target.checked;
+    renderCurrentPage();
+    renderSidebarThumbnails(pdfDoc, currentPage);
+});
+document.getElementById('grayscale-toggle').addEventListener('change', (e) => {
+    grayscale = e.target.checked;
+    renderCurrentPage();
+    renderSidebarThumbnails(pdfDoc, currentPage);
+});
+document.getElementById('rotate-btn').onclick = () => {
+    rotation = (rotation + 90) % 360;
+    renderCurrentPage();
+};
+document.getElementById('download-btn').onclick = () => {
+    chrome.downloads.download({ url: pdfUrl, filename: 'document.pdf' });
+};
+
+// Sidebar toggle
+document.getElementById('sidebar-toggle').onclick = () => {
+    document.body.classList.toggle('sidebar-collapsed');
+};
+
+// On load
 document.addEventListener('DOMContentLoaded', () => {
-    renderPdf(pdfUrl);
+    loadPdf(pdfUrl);
 });
 
 // Listen for settings changes from the options page (if viewer is already open)
@@ -140,3 +156,109 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         renderPdf(pdfUrl);
     }
 });
+
+// --- Controls for Zoom, Invert Colors, Grayscale --- //
+// These controls allow basic manipulations of the PDF view
+const zoomSlider = document.getElementById('zoom-slider');
+const zoomInput = document.getElementById('zoom-input');
+const zoomValue = document.getElementById('zoom-value');
+const invertToggle = document.getElementById('invert-toggle');
+const grayscaleToggle = document.getElementById('grayscale-toggle');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const pageNumberInput = document.getElementById('page-number');
+
+if (zoomSlider && zoomInput && zoomValue) {
+    zoomSlider.addEventListener('input', (e) => {
+        zoomLevel = parseFloat(e.target.value);
+        zoomValue.textContent = zoomLevel.toFixed(2) + 'x';
+        zoomInput.value = zoomLevel;
+        renderPdf(pdfUrl, currentPage);
+    });
+    zoomInput.addEventListener('change', (e) => {
+        let val = parseFloat(e.target.value);
+        if (isNaN(val) || val < 0.5) val = 0.5;
+        if (val > 2.5) val = 2.5;
+        zoomLevel = val;
+        zoomSlider.value = zoomLevel;
+        zoomValue.textContent = zoomLevel.toFixed(2) + 'x';
+        renderPdf(pdfUrl, currentPage);
+    });
+}
+
+if (invertToggle) invertToggle.addEventListener('change', () => renderPdf(pdfUrl, currentPage));
+if (grayscaleToggle) grayscaleToggle.addEventListener('change', () => renderPdf(pdfUrl, currentPage));
+if (sidebarToggle) sidebarToggle.onclick = () => document.body.classList.toggle('sidebar-collapsed');
+if (pageNumberInput) pageNumberInput.addEventListener('change', (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (val >= 1 && val <= totalPages) {
+        currentPage = val;
+        renderPdf(pdfUrl, currentPage);
+    }
+});
+
+// Rotate
+document.getElementById('rotate-btn').onclick = () => {
+  rotation = (rotation + 90) % 360;
+  renderPdf(pdfUrl, currentPage);
+};
+
+// Download
+document.getElementById('download-btn').onclick = () => {
+  chrome.downloads.download({ url: pdfUrl, filename: 'document.pdf' });
+};
+
+// Update page info
+function updatePageInfo(page, numPages) {
+  document.getElementById('page-number').value = page;
+  document.getElementById('page-count').textContent = `/ ${numPages}`;
+}
+
+// --- Lazy Rendering of Pages --- //
+// Render only the visible pages plus a buffer
+async function renderVisiblePages(pdf) {
+    const buffer = 2; // How many pages above/below the viewport to render
+    const windowHeight = window.innerHeight;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+
+    for (let i = 0; i < window.pagePlaceholders.length; i++) {
+        const pageDiv = window.pagePlaceholders[i];
+        const pageTop = pageDiv.offsetTop;
+        const pageBottom = pageTop + pageDiv.offsetHeight;
+
+        // Render if the page is within (viewport + buffer pages) of the current scroll
+        if (
+            (pageBottom > scrollTop - buffer * windowHeight) &&
+            (pageTop < scrollTop + (1 + buffer) * windowHeight)
+        ) {
+            if (!renderedPages[i + 1]) {
+                // Render this page
+                const pageNum = i + 1;
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                let filter = 'sepia(var(--blue-light-sepia, 0)) hue-rotate(var(--blue-light-hue-rotate, 0deg)) contrast(var(--contrast-value, 100%)) brightness(var(--brightness-value, 100%))';
+                if (invertColors) filter += ' invert(1)';
+                if (grayscale) filter += ' grayscale(1)';
+                canvas.style.filter = filter.trim();
+                canvas.style.transform = `scale(${zoomLevel})`;
+                canvas.style.transformOrigin = 'center center';
+
+                pageDiv.innerHTML = '';
+                pageDiv.appendChild(canvas);
+
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                renderedPages[pageNum] = true;
+            }
+        } else if (renderedPages[i + 1]) {
+            // Remove canvas to save memory
+            pageDiv.innerHTML = '';
+            delete renderedPages[i + 1];
+        }
+    }
+}
+
+// --- DO NOT add global scroll/resize listeners for renderVisiblePages(pdf) ---
+// Only add them inside renderPdf, after pdf is loaded

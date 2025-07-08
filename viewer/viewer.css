@@ -1,32 +1,36 @@
 /* viewer/viewer.css */
 
 body, html {
-    height: 100%;
+    height: 100vh;
+    width: 100vw;
     margin: 0;
     padding: 0;
-    overflow: auto;
-    background-color: #f0f0f0;
+    overflow: hidden;
+    background-color: var(--warm-background-color, #f0f0f0);
 }
 
 #pdf-container {
-    overflow: auto;
-    width: 100%;
-    min-height: 100vh;
-    position: relative;
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100%;
 }
 
 canvas {
     display: block;
     margin: 0 auto 24px auto;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    background: #fff;
+    background: var(--warm-background-color, #fff);
+}
+
+#pdf-container canvas {
+    transition: transform 0.4s ease-in-out;
 }
 
 #viewer-container {
+    height: calc(100vh - 52px); /* Full height minus top bar */
     width: 100%;
-    height: 100%;
-    overflow: auto; /* This allows scrolling if the iframe content scales larger */
-    position: relative; /* Needed for positioning elements inside if needed */
+    display: flex;
 }
 
 #pdf-viewer {
@@ -54,26 +58,114 @@ canvas {
 }
 
 #top-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   background: #232323;
   color: #eee;
   padding: 0 16px;
-  height: 48px;
+  min-height: 52px;
   border-bottom: 1px solid #444;
   font-family: 'Segoe UI', Arial, sans-serif;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-sizing: border-box;
+  gap: 16px;
 }
-#top-bar button {
+.top-bar-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.top-bar-section.left {
+    justify-content: flex-start;
+}
+.top-bar-section.center {
+    justify-content: center;
+}
+.top-bar-section.right {
+    justify-content: flex-end;
+}
+#top-bar button,
+#top-bar .toolbar-btn {
   background: none;
   border: none;
   color: inherit;
-  font-size: 1.3em;
-  margin: 0 8px;
+  font-size: 1.4em;
+  margin: 0;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+#top-bar button:hover {
+  background-color: #3a3a3a;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid #444;
+  padding-left: 16px;
+}
+.page-controls input {
+  width: 40px;
+  background: #1c1c1c;
+  border: 1px solid #555;
+  color: #eee;
+  text-align: center;
+  border-radius: 4px;
+  padding: 4px 0;
+}
+.page-controls .separator {
+  margin: 0 8px;
+  color: #555;
+}
+#zoom-level {
+  font-weight: 500;
+  width: 50px;
+  text-align: center;
+}
+/* Custom Toggle Switch */
+.toggle-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.toggle-control .label-text {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: #ccc;
+}
+.toggle-control input[type="checkbox"] {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #4f4f4f;
+  border-radius: 20px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+.toggle-control input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  background: #f0f0f0;
+  transition: transform 0.2s ease-in-out;
+}
+.toggle-control input[type="checkbox"]:checked {
+  background: #7b5cff;
+}
+.toggle-control input[type="checkbox"]:checked::before {
+  transform: translateX(18px);
 }
 #page-info {
   display: flex;
@@ -82,11 +174,9 @@ canvas {
   margin-right: auto;
 }
 #sidebar-preview {
-  position: fixed;
-  top: 48px;
-  left: 0;
-  height: calc(100vh - 48px);
-  width: 60px;
+  position: relative;
+  height: 100%;
+  width: 160px;
   background: #232323e6;
   z-index: 20;
   transition: width 0.25s cubic-bezier(.4,2,.6,1), box-shadow 0.2s;
@@ -94,7 +184,7 @@ canvas {
   overflow-y: auto;
   box-shadow: 2px 0 8px rgba(0,0,0,0.08);
 }
-#sidebar-preview.open { width: 160px; }
+#sidebar-preview.open { display: none; }
 #sidebar-content { padding: 12px 4px; }
 .sidebar-thumb {
   width: 120px;
@@ -106,13 +196,54 @@ canvas {
   cursor: pointer;
   border: 2px solid transparent;
   background: #fff;
-  transition: border 0.2s;
+  transition: border 0.2s, filter 0.2s, opacity 0.2s;
+  filter: grayscale(80%);
+  opacity: 0.7;
 }
 .sidebar-thumb.selected {
   border: 2px solid #7b5cff;
+  filter: none;
+  opacity: 1;
+}
+.page-container {
+    margin: 0 auto 24px auto;
+    width: fit-content;
 }
 body.sidebar-collapsed #sidebar-preview { width: 0; min-width: 0; }
 body.sidebar-collapsed #sidebar-content { display: none; }
-body.sidebar-collapsed #pdf-container { margin-left: 0 !important; }
-#pdf-container { margin-left: 160px; transition: margin-left 0.25s; }
 body.sidebar-collapsed #pdf-container { margin-left: 0; }
+#pdf-container { margin-left: 160px; transition: margin-left 0.25s; }
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #2e2e2e;
+  border: 1px solid #555;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  z-index: 101;
+  min-width: 160px;
+  padding: 5px 0;
+}
+.dropdown-content.show {
+  display: block;
+}
+.dropdown-content button {
+  display: block;
+  width: 100%;
+  padding: 10px 15px;
+  text-align: left;
+  font-size: 0.9em;
+  color: #eee;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.dropdown-content button:hover {
+  background-color: #4a4a4a;
+}

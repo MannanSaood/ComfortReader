@@ -1,33 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "PDF Comfort Reader",
+  "name": "ComfortReader",
   "version": "1.0",
-  "description": "Transforms PDF viewing for enhanced readability and eye comfort.",
-
+  "description": "A comfortable PDF reading experience.",
+  "permissions": ["activeTab", "storage", "downloads", "webRequest"],
+  "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "background.js"
+      "service_worker": "background.js"
   },
-  "permissions": [
-    "activeTab",
-    "storage",
-    "webRequest"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
   "action": {
-    "default_popup": "options/options.html"
+      "default_title": "ComfortReader Settings",
+      "default_popup": "options/options.html"
   },
   "options_page": "options/options.html",
   "web_accessible_resources": [
-    {
-      "resources": [
-        "viewer/*",
-        "pdfjs/*"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ]
+      {
+          "resources": ["viewer/viewer.html"],
+          "matches": ["<all_urls>"]
+      }
+  ],
+  "content_security_policy": {
+      "extension_pages": "script-src 'self'; style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://cdnjs.cloudflare.com; child-src 'self' blob:;"
+  }
 }

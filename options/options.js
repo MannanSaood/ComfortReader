@@ -110,9 +110,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chrome.storage.sync.set(settingsToSave, () => {
             console.log('Settings saved:', settingsToSave);
-            // Notify background script that settings have changed
+
+            // Find all viewer tabs and send them a message directly
+            chrome.tabs.query({ url: chrome.runtime.getURL("viewer/viewer.html") + "*" }, (tabs) => {
+                tabs.forEach(tab => {
+                    chrome.tabs.sendMessage(tab.id, { action: "settingsChanged" });
+                });
+            });
+
+            // Also send a message to the background script for good measure
             chrome.runtime.sendMessage({ action: "settingsChanged" });
-            // You might want to show a "Settings saved!" message here
         });
     }
 

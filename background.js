@@ -86,3 +86,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicate that sendResponse will be called asynchronously
   }
 });
+
+// Listen for messages from the options page
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Check if the message is indicating a settings change
+    if (message.action === "settingsChanged") {
+        // Forward the message to any open viewer tabs
+        chrome.tabs.query({ url: chrome.runtime.getURL("viewer/viewer.html") + "*" }, (tabs) => {
+            tabs.forEach(tab => {
+                chrome.tabs.sendMessage(tab.id, { action: "settingsChanged" });
+            });
+        });
+    }
+});
+
+// Open the PDF in a new tab when the extension icon is clicked
+chrome.action.onClicked.addListener(() => {
+    chrome.tabs.create({ url: 'viewer/viewer.html' });
+});

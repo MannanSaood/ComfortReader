@@ -1,137 +1,145 @@
 // options/options.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Background Warmth Buttons
-    const colorButtons = document.querySelectorAll('.color-btn'); // This selects all buttons with class 'color-btn'
-    const customColorPicker = document.getElementById('customColorPicker');
-    const customColorInput = document.getElementById('customColorInput');
-    const applyCustomColorBtn = document.getElementById('applyCustomColorBtn');
+    // --- DOM Elements ---
+    const DOM = {
+        colorButtons: document.querySelectorAll('.color-btn'),
+        customColorPicker: document.getElementById('customColorPicker'),
+        customColorInput: document.getElementById('customColorInput'),
+        applyCustomColorBtn: document.getElementById('applyCustomColorBtn'),
+        blueLightFilterToggle: document.getElementById('blueLightFilterToggle'),
+        blueLightIntensitySlider: document.getElementById('blueLightIntensitySlider'),
+        blueLightIntensityValue: document.getElementById('blueLightIntensityValue'),
+        contrastLevelSlider: document.getElementById('contrastLevelSlider'),
+        contrastLevelValue: document.getElementById('contrastLevelValue'),
+        applyAllRadio: document.getElementById('applyAllRadio'),
+        applySelectedRadio: document.getElementById('applySelectedRadio'),
+        siteInput: document.getElementById('siteInput'),
+        addSiteBtn: document.getElementById('addSiteBtn'),
+        siteList: document.getElementById('siteList'),
+        siteListContainer: document.querySelector('.site-list-container'),
+        saveSettingsBtn: document.getElementById('saveSettingsBtn')
+    };
 
-    // Filter Sliders and Toggles
-    const blueLightFilterToggle = document.getElementById('blueLightFilterToggle');
-    const blueLightIntensitySlider = document.getElementById('blueLightIntensitySlider');
-    const blueLightIntensityValueSpan = document.getElementById('blueLightIntensityValue');
-    const contrastLevelSlider = document.getElementById('contrastLevelSlider');
-    const contrastLevelValueSpan = document.getElementById('contrastLevelValue');
-
-    // Scope Radios
-    const applyAllRadio = document.getElementById('applyAllRadio');
-    const applySelectedRadio = document.getElementById('applySelectedRadio');
-
-    // Site List Elements
-    const siteInput = document.getElementById('siteInput');
-    const addSiteBtn = document.getElementById('addSiteBtn');
-    const siteListUl = document.getElementById('siteList');
-
-    // Save Button
-    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-
-    // Default settings
-    const defaultSettings = {
-        warmColor: '#FBF0E0', // Cream
-        contrastLevel: 100, // 100% means no change from original
+    // --- Default Settings ---
+    const DEFAULTS = {
+        warmColor: '#333333', // Dark Gray
+        contrastLevel: 100,
         blueLightFilter: false,
         blueLightIntensity: 50,
-        scope: 'all', // 'all' or 'selected'
+        scope: 'all',
         siteList: []
     };
 
-    // Load settings from storage
-    function loadSettings() {
-        chrome.storage.sync.get(defaultSettings, (settings) => {
-            // Background Warmth
-            let activeColor = settings.warmColor;
-            colorButtons.forEach(button => {
-                if (button.dataset.color === activeColor) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
-            // Set custom color input if it's not one of the presets
-            const presetColors = Array.from(colorButtons).map(btn => btn.dataset.color);
-            if (!presetColors.includes(activeColor)) {
-                customColorInput.value = activeColor;
-                customColorPicker.value = activeColor; // Set picker value too
-            } else {
-                customColorInput.value = ''; // Clear if a preset is active
-                // If you want picker to show preset color, uncomment: customColorPicker.value = activeColor;
-            }
+    let currentSettings = { ...DEFAULTS };
 
+    // --- Core Functions ---
 
-            // Filters
-            blueLightFilterToggle.checked = settings.blueLightFilter;
-            blueLightIntensitySlider.value = settings.blueLightIntensity;
-            blueLightIntensityValueSpan.textContent = settings.blueLightIntensity + '%';
-            blueLightIntensitySlider.disabled = !settings.blueLightFilter; // Set initial disabled state
-            contrastLevelSlider.value = settings.contrastLevel;
-            contrastLevelValueSpan.textContent = settings.contrastLevel + '%';
-
-
-            // Scope
-            if (settings.scope === 'all') {
-                applyAllRadio.checked = true;
-            } else {
-                applySelectedRadio.checked = true;
-            }
-            toggleSiteListVisibility(settings.scope);
-
-            // Site List
-            renderSiteList(settings.siteList);
+    /**
+     * Loads settings from chrome.storage.sync and updates the UI.
+     */
+    async function loadSettings() {
+        currentSettings = await new Promise(resolve => {
+            chrome.storage.sync.get(DEFAULTS, settings => resolve(settings));
         });
+        updateUI(currentSettings);
     }
 
-    // Save settings to storage and notify content script
+    /**
+     * Gathers settings from the DOM, saves them to storage, and notifies other scripts.
+     */
     function saveSettings() {
-        let selectedWarmColor = defaultSettings.warmColor; // Default to cream if nothing is active/custom
-        const activeButton = document.querySelector('.color-btn.active');
-        if (activeButton) {
-            selectedWarmColor = activeButton.dataset.color;
-        } else if (customColorInput.value && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(customColorInput.value)) {
-            // Only use custom color if it's a valid hex and no preset is active
-            selectedWarmColor = customColorInput.value;
-        } else {
-            // If custom input is empty or invalid, and no preset is active, revert to default preset (Cream)
-             selectedWarmColor = defaultSettings.warmColor;
-             // Visually reset if needed
-             customColorInput.value = '';
-             colorButtons.forEach(btn => btn.classList.remove('active'));
-             document.getElementById('creamBtn').classList.add('active');
-        }
-
-        const settingsToSave = {
-            warmColor: selectedWarmColor,
-            contrastLevel: parseInt(contrastLevelSlider.value),
-            blueLightFilter: blueLightFilterToggle.checked,
-            blueLightIntensity: parseInt(blueLightIntensitySlider.value),
-            scope: document.querySelector('input[name="scope"]:checked').value,
-            siteList: getSiteListFromDOM()
-        };
+        const settingsToSave = readSettingsFromDOM();
+        currentSettings = settingsToSave; // Update local state
 
         chrome.storage.sync.set(settingsToSave, () => {
             console.log('Settings saved:', settingsToSave);
-
-            // Find all viewer tabs and send them a message directly
+            // Notify active viewer tabs
             chrome.tabs.query({ url: chrome.runtime.getURL("viewer/viewer.html") + "*" }, (tabs) => {
-                tabs.forEach(tab => {
-                    chrome.tabs.sendMessage(tab.id, { action: "settingsChanged" });
-                });
+                tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { action: "settingsChanged" }));
             });
-
-            // Also send a message to the background script for good measure
+            // Notify background script
             chrome.runtime.sendMessage({ action: "settingsChanged" });
         });
     }
 
-    // Render site list in the DOM
+    // --- UI and DOM Interaction ---
+
+    /**
+     * Reads the current state of all UI controls and returns a settings object.
+     * @returns {object} The current settings based on the UI.
+     */
+    function readSettingsFromDOM() {
+        const activeButton = document.querySelector('.color-btn.active');
+        let warmColor = DEFAULTS.warmColor;
+        if (activeButton) {
+            warmColor = activeButton.dataset.color;
+        } else if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(DOM.customColorInput.value)) {
+            warmColor = DOM.customColorInput.value;
+        }
+
+        const siteListItems = Array.from(DOM.siteList.children)
+            .filter(li => !li.classList.contains('empty-message'))
+            .map(li => li.textContent.replace('Remove', '').trim());
+
+        return {
+            warmColor,
+            contrastLevel: parseInt(DOM.contrastLevelSlider.value, 10),
+            blueLightFilter: DOM.blueLightFilterToggle.checked,
+            blueLightIntensity: parseInt(DOM.blueLightIntensitySlider.value, 10),
+            scope: DOM.applyAllRadio.checked ? 'all' : 'selected',
+            siteList: siteListItems
+        };
+    }
+
+    /**
+     * Updates all UI elements to reflect the provided settings object.
+     * @param {object} settings - The settings object to apply to the UI.
+     */
+    function updateUI(settings) {
+        // Background Warmth
+        DOM.colorButtons.forEach(button => {
+            button.classList.toggle('active', button.dataset.color === settings.warmColor);
+        });
+        const isPreset = Array.from(DOM.colorButtons).some(btn => btn.dataset.color === settings.warmColor);
+        if (!isPreset) {
+            DOM.customColorInput.value = settings.warmColor;
+            DOM.customColorPicker.value = settings.warmColor;
+        } else {
+            DOM.customColorInput.value = '';
+        }
+
+        // Filters
+        DOM.blueLightFilterToggle.checked = settings.blueLightFilter;
+        DOM.blueLightIntensitySlider.value = settings.blueLightIntensity;
+        DOM.blueLightIntensityValue.textContent = `${settings.blueLightIntensity}%`;
+        DOM.blueLightIntensitySlider.disabled = !settings.blueLightFilter;
+        DOM.contrastLevelSlider.value = settings.contrastLevel;
+        DOM.contrastLevelValue.textContent = `${settings.contrastLevel}%`;
+
+        // Scope
+        DOM.applyAllRadio.checked = settings.scope === 'all';
+        DOM.applySelectedRadio.checked = settings.scope === 'selected';
+        DOM.siteListContainer.style.display = settings.scope === 'selected' ? 'block' : 'none';
+
+        // Site List
+        renderSiteList(settings.siteList);
+
+        // Remove the redundant "Save" button
+        DOM.saveSettingsBtn.style.display = 'none';
+    }
+
+    /**
+     * Renders the list of sites in the DOM.
+     * @param {string[]} siteList - An array of site URLs.
+     */
     function renderSiteList(siteList) {
-        siteListUl.innerHTML = '';
+        DOM.siteList.innerHTML = '';
         if (siteList.length === 0) {
             const li = document.createElement('li');
             li.textContent = 'No sites added yet.';
-            li.style.fontStyle = 'italic';
-            li.style.color = 'var(--text-color-medium)';
-            siteListUl.appendChild(li);
+            li.className = 'empty-message';
+            DOM.siteList.appendChild(li);
             return;
         }
         siteList.forEach(site => {
@@ -139,133 +147,106 @@ document.addEventListener('DOMContentLoaded', () => {
             li.textContent = site;
             const removeBtn = document.createElement('button');
             removeBtn.textContent = 'Remove';
-            removeBtn.classList.add('remove-site-btn');
-            removeBtn.addEventListener('click', () => {
-                removeSite(site);
-            });
+            removeBtn.className = 'remove-site-btn';
+            removeBtn.addEventListener('click', () => removeSite(site));
             li.appendChild(removeBtn);
-            siteListUl.appendChild(li);
+            DOM.siteList.appendChild(li);
         });
     }
 
-    // Add a site to the list
+    /**
+     * Adds a site to the list and saves settings.
+     */
     function addSite() {
-        const site = siteInput.value.trim().toLowerCase();
-        if (site) {
-            chrome.storage.sync.get(defaultSettings, (settings) => {
-                if (!settings.siteList.includes(site)) {
-                    settings.siteList.push(site);
-                    chrome.storage.sync.set({ siteList: settings.siteList }, () => {
-                        renderSiteList(settings.siteList);
-                        siteInput.value = ''; // Clear input
-                        saveSettings(); // Save immediately after adding/removing a site
-                    });
-                } else {
-                    alert('Site already in list!'); // Basic feedback
-                }
-            });
+        const site = DOM.siteInput.value.trim().toLowerCase();
+        if (site && !currentSettings.siteList.includes(site)) {
+            currentSettings.siteList.push(site);
+            DOM.siteInput.value = '';
+            renderSiteList(currentSettings.siteList);
+            saveSettings();
+        } else if (currentSettings.siteList.includes(site)) {
+            alert('Site already in list!');
         }
     }
 
-    // Remove a site from the list
+    /**
+     * Removes a site from the list and saves settings.
+     * @param {string} siteToRemove - The site URL to remove.
+     */
     function removeSite(siteToRemove) {
-        chrome.storage.sync.get(defaultSettings, (settings) => {
-            const updatedList = settings.siteList.filter(site => site !== siteToRemove);
-            chrome.storage.sync.set({ siteList: updatedList }, () => {
-                renderSiteList(updatedList);
-                saveSettings(); // Save immediately after adding/removing a site
+        currentSettings.siteList = currentSettings.siteList.filter(site => site !== siteToRemove);
+        renderSiteList(currentSettings.siteList);
+        saveSettings();
+    }
+
+    // --- Event Listeners ---
+
+    /**
+     * Initializes all event listeners for the page.
+     */
+    function initEventListeners() {
+        // Background Warmth
+        DOM.colorButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                DOM.colorButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                DOM.customColorInput.value = '';
+                saveSettings();
             });
         });
-    }
 
-    // Get current site list from DOM (for saving)
-    function getSiteListFromDOM() {
-        // Filter out the "No sites added yet." placeholder if it exists
-        const items = Array.from(siteListUl.children)
-                      .filter(li => li.textContent !== 'No sites added yet.');
-        return items.map(li => li.textContent.replace('Remove', '').trim());
-    }
+        const handleCustomColor = () => {
+            DOM.colorButtons.forEach(btn => btn.classList.remove('active'));
+            saveSettings();
+        };
 
-    // Toggle visibility of site list container
-    function toggleSiteListVisibility(scope) {
-        const siteListContainer = document.querySelector('.site-list-container');
-        if (scope === 'selected') {
-            siteListContainer.style.display = 'block';
-        } else {
-            siteListContainer.style.display = 'none';
-        }
-    }
-
-    // Event Listeners
-
-    // Background Warmth Buttons
-    colorButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            colorButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            customColorInput.value = ''; // Clear custom input when a preset is selected
-            saveSettings(); // Save on preset selection
+        DOM.customColorPicker.addEventListener('input', e => {
+            DOM.customColorInput.value = e.target.value;
         });
-    });
 
-    // Custom Color Picker and Input
-    customColorPicker.addEventListener('input', (event) => {
-        customColorInput.value = event.target.value;
-        colorButtons.forEach(btn => btn.classList.remove('active')); // Deactivate preset buttons
-        // saveSettings() called by applyCustomColorBtn or general save
-    });
+        DOM.customColorInput.addEventListener('input', e => {
+            if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(e.target.value)) {
+                DOM.customColorPicker.value = e.target.value;
+            }
+        });
 
-    customColorInput.addEventListener('input', (event) => {
-        const value = event.target.value;
-        if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value)) {
-            customColorPicker.value = value;
-            colorButtons.forEach(btn => btn.classList.remove('active')); // Deactivate preset buttons
-        }
-        // saveSettings() called by applyCustomColorBtn or general save
-    });
+        DOM.applyCustomColorBtn.addEventListener('click', handleCustomColor);
 
-    applyCustomColorBtn.addEventListener('click', () => {
-        // Ensure custom color is applied and other buttons are deselected
-        // Validation for customColorInput value will happen in saveSettings
-        colorButtons.forEach(btn => btn.classList.remove('active'));
-        saveSettings();
-    });
+        // Filters
+        DOM.blueLightFilterToggle.addEventListener('change', () => {
+            DOM.blueLightIntensitySlider.disabled = !DOM.blueLightFilterToggle.checked;
+            saveSettings();
+        });
 
+        DOM.blueLightIntensitySlider.addEventListener('input', () => {
+            DOM.blueLightIntensityValue.textContent = `${DOM.blueLightIntensitySlider.value}%`;
+            saveSettings();
+        });
 
-    // Filters - Use 'change' for checkboxes and 'input' for sliders
-    blueLightFilterToggle.addEventListener('change', () => {
-        blueLightIntensitySlider.disabled = !blueLightFilterToggle.checked;
-        saveSettings();
-    });
-    blueLightIntensitySlider.addEventListener('input', () => {
-        blueLightIntensityValueSpan.textContent = blueLightIntensitySlider.value + '%';
-        saveSettings(); // Save as slider is moved
-    });
-    contrastLevelSlider.addEventListener('input', () => {
-        contrastLevelValueSpan.textContent = contrastLevelSlider.value + '%';
-        saveSettings(); // Save as slider is moved
-    });
+        DOM.contrastLevelSlider.addEventListener('input', () => {
+            DOM.contrastLevelValue.textContent = `${DOM.contrastLevelSlider.value}%`;
+            saveSettings();
+        });
 
+        // Scope
+        [DOM.applyAllRadio, DOM.applySelectedRadio].forEach(radio => {
+            radio.addEventListener('change', () => {
+                DOM.siteListContainer.style.display = DOM.applySelectedRadio.checked ? 'block' : 'none';
+                saveSettings();
+            });
+        });
 
-    // Scope Radios - Use 'change' for radios
-    applyAllRadio.addEventListener('change', (event) => {
-        toggleSiteListVisibility(event.target.value);
-        saveSettings();
-    });
-    applySelectedRadio.addEventListener('change', (event) => {
-        toggleSiteListVisibility(event.target.value);
-        saveSettings();
-    });
+        // Site List
+        DOM.addSiteBtn.addEventListener('click', addSite);
+        DOM.siteInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addSite();
+            }
+        });
+    }
 
-    // Site List
-    addSiteBtn.addEventListener('click', addSite);
-    siteInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent default form submission if any
-            addSite();
-        }
-    });
-
-    // Initial load of settings when popup opens
+    // --- Initialization ---
+    initEventListeners();
     loadSettings();
 });

@@ -13,7 +13,9 @@
   "background": {
       "service_worker": "background.js"
   },
-  "action": {},
+  "action": {
+    "default_popup": "options/options.html"
+  },
   "options_page": "options/options.html",
   "web_accessible_resources": [
       {

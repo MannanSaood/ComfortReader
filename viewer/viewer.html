@@ -5,10 +5,10 @@
     <title>ComfortReader PDF Viewer</title>
     <link rel="stylesheet" href="viewer.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
+    </head>
 <body>
 
-<div id="top-bar">
+  <div id="top-bar">
     <div class="top-bar-section left">
         <button id="sidebar-toggle" class="toolbar-btn" title="Toggle Sidebar">
             <i class="fas fa-bars"></i>
@@ -20,7 +20,7 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <input type="number" id="page-number" value="1" min="1">
-            <span id="page-count">/ 1</span>
+    <span id="page-count">/ 1</span>
             <button id="next-page" class="toolbar-btn" title="Next Page">
                 <i class="fas fa-arrow-right"></i>
             </button>
@@ -76,18 +76,18 @@
             </div>
         </div>
     </div>
-</div>
+  </div>
 
 <div id="viewer-container">
-    <div id="sidebar-preview">
-        <div id="sidebar-content"></div>
-    </div>
-    <div id="pdf-container"></div>
+  <div id="sidebar-preview">
+    <div id="sidebar-content"></div>
+  </div>
+  <div id="pdf-container"></div>
 </div>
 
-<div id="loading-message"></div>
+  <div id="loading-message"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-<script type="module" src="viewer.js"></script>
+  <script type="module" src="viewer.js"></script>
 
 </body>
 </html>

@@ -404,11 +404,40 @@ async function handleModifiedDownload() {
     URL.revokeObjectURL(url);
 }
 
-/**
- * Creates an iframe with the given blob URL and triggers the print dialog.
- * @param {string} blobUrl - The URL of the blob to print.
- */
-function printBlob(blobUrl) {
+async function handleStandardPrint() {
+    DOM.printDropdown.classList.remove('show');
+    try {
+        const response = await fetch(PDF_URL);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = blobUrl;
+
+        const cleanup = () => {
+            URL.revokeObjectURL(blobUrl);
+            iframe.remove();
+            window.removeEventListener('afterprint', cleanup);
+        };
+
+        window.addEventListener('afterprint', cleanup);
+
+        DOM.body.appendChild(iframe);
+        iframe.onload = () => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        };
+    } catch (error) {
+        console.error('Standard print failed:', error);
+        alert('Could not prepare the standard PDF for printing.');
+    }
+}
+
+async function handleModifiedPrint() {
+    DOM.printDropdown.classList.remove('show');
+    const blob = await generateModifiedPdf();
+    const blobUrl = URL.createObjectURL(blob);
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     iframe.src = blobUrl;
@@ -426,27 +455,6 @@ function printBlob(blobUrl) {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
     };
-}
-
-async function handleStandardPrint() {
-    DOM.printDropdown.classList.remove('show');
-    try {
-        const response = await fetch(PDF_URL);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        printBlob(blobUrl);
-    } catch (error) {
-        console.error('Standard print failed:', error);
-        alert('Could not prepare the standard PDF for printing.');
-    }
-}
-
-async function handleModifiedPrint() {
-    DOM.printDropdown.classList.remove('show');
-    const blob = await generateModifiedPdf();
-    const blobUrl = URL.createObjectURL(blob);
-    printBlob(blobUrl);
 }
 
 /**

@@ -94,7 +94,8 @@ body, html {
     overflow-x: hidden;
     height: 100%;
     margin-left: var(--sidebar-width);
-    transition: margin-left 0.25s;
+    transition: margin-left 0.25s, transform 0.2s ease-in-out;
+    transform-origin: center; /* Changed from top center */
     position: relative; /* This is crucial for positioning the selection layer */
 
     /* Center content (single pages, spreads, continuous view pages) */
@@ -497,13 +498,16 @@ body.presentation-mode #viewer-container {
     width: 100vw;
     background: rgba(0, 0, 0, 0.85);
     z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 body.presentation-mode #pdf-container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: relative; /* No longer absolute */
+    top: auto;
+    left: auto;
+    transform: none; /* Centering is handled by flexbox, transform is for zoom */
     margin-left: 0; /* Override default margin */
     transition: none; /* Disable transition during presentation mode */
     overflow: visible; /* Let the inner content determine size */
@@ -540,6 +544,70 @@ body.presentation-mode #doc-properties-close-btn:hover {
     position: relative;
 }
 
+.page > canvas {
+    display: block; /* Ensures no extra space below the canvas */
+}
+
+.comic-page-image {
+    display: block;
+    margin: 0; /* Let the container handle spacing */
+    flex-shrink: 0; /* Prevent image from shrinking in the flex container */
+}
+
+/* --- Comic Book Zoom & Layout Styles --- */
+
+/* Reverse page order for manga mode */
+#pdf-container.manga-mode .spread-container {
+    flex-direction: row-reverse;
+}
+
+/* FIT/AUTO: Make images fill the available height */
+#pdf-container.zoom-fit .spread-container,
+#pdf-container.zoom-auto .spread-container {
+    align-items: stretch; /* Forces children to fill height */
+}
+#pdf-container.zoom-fit .comic-page-image,
+#pdf-container.zoom-auto .comic-page-image {
+    width: auto;
+    /* Use a fallback for browsers not supporting dvh, minus the top bar */
+    height: calc(100vh - 48px);
+    height: calc(100dvh - 48px); /* Dynamic viewport height is ideal */
+}
+/* For single pages, let them expand to full width */
+#pdf-container.zoom-fit .comic-page-image:only-child,
+#pdf-container.zoom-auto .comic-page-image:only-child {
+    max-width: 100%;
+}
+
+
+/* WIDTH: Make images fill the container width */
+#pdf-container.zoom-width .comic-page-image {
+    width: 50%; /* 2-page spread */
+    height: auto;
+}
+#pdf-container.zoom-width .comic-page-image:only-child {
+    width: 100%; /* 1-page view */
+}
+
+/* ACTUAL: Remove constraints */
+#pdf-container.zoom-actual .comic-page-image {
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+}
+
+/* Page flip animation */
+#pdf-container:not(.continuous-view),
+body.presentation-mode #pdf-container {
+    transition: opacity 0.15s ease-in-out;
+}
+#pdf-container.page-changing {
+    opacity: 0;
+}
+
+
+/* --- Annotation Layers --- */
 .textLayer {
     position: absolute;
     left: 0;

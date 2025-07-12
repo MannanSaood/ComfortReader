@@ -85,6 +85,14 @@
                 <input type="checkbox" id="invert-scroll-toggle">
                 <span class="label-text">Invert Scroll</span>
             </label>
+            <div id="reading-mode-controls" class="control-group" style="display: none;">
+                <button id="comic-mode-btn" class="toolbar-btn" title="Comic Mode (Left-to-Right)">
+                    <i class="fas fa-book-open"></i> Comic
+                </button>
+                <button id="manga-mode-btn" class="toolbar-btn" title="Manga Mode (Right-to-Left)">
+                    <i class="fas fa-book-reader"></i> Manga
+                </button>
+            </div>
             <div class="dropdown-container">
                 <button id="spread-mode-btn" class="toolbar-btn" title="Spread Mode">
                     <i class="fas fa-book-open"></i>
@@ -222,7 +230,7 @@
 </div>
 
   <div id="loading-message"></div>
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="./lib/pdf-lib.min.js"></script>
 <script src="./lib/jspdf.umd.min.js"></script>
   <script type="module" src="viewer.js"></script>
 </body>

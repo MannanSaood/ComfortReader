@@ -28,11 +28,14 @@
           "viewer/viewer.js",
           "viewer/pdfjs/pdf.mjs",
           "viewer/pdfjs/pdf.worker.mjs",
-          "viewer/lib/jspdf.umd.min.js"
+          "viewer/lib/jspdf.umd.min.js",
+          "viewer/viewer.html",
+          "viewer/lib/libarchive.js/dist/worker-bundle.js"
       ],
       "matches": ["<all_urls>"]
-  }],
+    }
+  ],
   "content_security_policy": {
-      "extension_pages": "script-src 'self'; style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://cdnjs.cloudflare.com; child-src 'self' blob:;"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }

@@ -181,6 +181,9 @@ const DOM = {
     rotateDropdown: document.getElementById('rotate-dropdown'),
     rotateLeftBtn: document.getElementById('rotate-left-btn'),
     rotateRightBtn: document.getElementById('rotate-right-btn'),
+    readingModeControls: document.getElementById('reading-mode-controls'),
+    comicModeBtn: document.getElementById('comic-mode-btn'),
+    mangaModeBtn: document.getElementById('manga-mode-btn'),
     body: document.body,
 };
 
@@ -246,7 +249,11 @@ const state = {
         blueLight: false,
         blueLightIntensity: 50,
         contrast: 100,
-    }
+    },
+    isComicMode: false, // true for cbr/cbz files
+    readingDirection: 'ltr', // 'ltr' or 'rtl'
+    comicPages: [], // Will hold image URLs for comic mode
+    comicZoomLevel: 1.0,
 };
 
 // --- Rendering ---
@@ -255,12 +262,57 @@ const state = {
  * Main render dispatcher. Calls the correct render function based on view mode.
  */
 async function render() {
+    if (state.isComicMode) {
+        await renderComicBookView();
+        return;
+    }
     // No longer applying filters here, will be done per-page canvas
     if (state.isContinuousView) {
         await renderContinuousView();
     } else {
         await renderSinglePageView();
     }
+}
+
+/**
+ * Renders the current page for a comic book (CBR/CBZ).
+ */
+async function renderComicBookView() {
+    DOM.container.innerHTML = '';
+    if (state.comicPages.length === 0) return;
+
+    // Create a spread container for consistent layout
+    const spreadContainer = document.createElement('div');
+    spreadContainer.className = 'spread-container';
+
+    const pageNum = state.currentPage;
+    const pagesToRender = [];
+
+    if (state.spreadMode === 'none' || pageNum === 1 || pageNum >= state.totalPages) {
+        pagesToRender.push(state.comicPages[pageNum - 1]);
+    } else {
+        // Determine the two pages for the spread
+        let page1Num;
+        if (state.spreadMode === 'odd') { // (2,3), (4,5)
+            page1Num = (pageNum % 2 === 0) ? pageNum : pageNum - 1;
+        } else { // 'even' spread (1,2), (3,4)
+            page1Num = (pageNum % 2 !== 0) ? pageNum : pageNum - 1;
+        }
+        
+        if (state.comicPages[page1Num -1]) pagesToRender.push(state.comicPages[page1Num -1]);
+        if (state.comicPages[page1Num]) pagesToRender.push(state.comicPages[page1Num]);
+    }
+
+    pagesToRender.forEach(imageUrl => {
+        if (imageUrl) {
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.className = 'comic-page-image';
+            spreadContainer.appendChild(img);
+        }
+    });
+
+    DOM.container.appendChild(spreadContainer);
 }
 
 /**
@@ -291,7 +343,7 @@ async function renderSinglePageView() {
             page1Num = (pageNum % 2 === 0) ? pageNum : pageNum - 1;
         } else {
             // Spreads are (1,2), (3,4), etc.
-            page1Num = (pageNum % 2 !== 0) ? pageNum : pageNum - 1;
+            page1Num = (pageNum % 2 === 1) ? pageNum : pageNum - 1;
         }
         page2Num = page1Num + 1;
 
@@ -866,6 +918,27 @@ async function initializeViewer() {
     }
 }
 
+/**
+ * Adjusts the UI for comic book viewing mode (CBR/CBZ).
+ */
+function updateUIForComicBook() {
+    state.isComicMode = true;
+
+    // Show comic-specific controls
+    DOM.readingModeControls.style.display = 'flex';
+    DOM.comicModeBtn.classList.add('active');
+
+    // Hide PDF/inapplicable controls
+    const controlsToHide = [
+        DOM.docPropertiesBtn, DOM.customizeBtn, DOM.downloadBtn,
+        DOM.printBtn, DOM.invertToggle, DOM.grayscaleToggle,
+        DOM.horizontalViewToggle.parentElement // Hide the label wrapper
+    ];
+    controlsToHide.forEach(el => {
+        if (el) el.style.display = 'none';
+    });
+}
+
 
 /**
  * Handles loading, extracting, and converting a comic book archive (CBR/CBZ) to a PDF.
@@ -873,84 +946,81 @@ async function initializeViewer() {
  */
 async function handleArchive(url) {
     showLoader(true, 'Opening archive...');
+    updateUIForComicBook();
 
     // Dynamically import libarchivejs and its dependencies
     const { Archive } = await import('./lib/libarchive.js/dist/libarchive.js');
-    
-    // 1. Initialize libarchive - requires worker file to be available
+
     try {
         Archive.init({
             workerUrl: './lib/libarchive.js/dist/worker-bundle.js'
         });
     } catch (e) {
-        // It might already be initialized.
-        console.warn('Archive.init error:', e);
+        console.warn('Archive.init may have already been called:', e);
     }
 
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const file = new File([blob], url.split('/').pop());
 
-    // 2. Fetch the archive
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const file = new File([blob], url.split('/').pop());
+        const archive = await Archive.open(file);
+        const files = await archive.extractFiles();
 
-    // 3. Open and extract
-    const archive = await Archive.open(file);
-    const files = await archive.extractFiles();
-
-    // 4. Filter and sort images (natural sort for filenames like 'page1.jpg', 'page10.jpg')
-    const imageFiles = Object.values(files).filter(f => 
-        /\.(jpe?g|png|gif|webp)$/i.test(f.name)
-    ).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-
-    if (imageFiles.length === 0) {
-        throw new Error('No images found in the archive.');
-    }
-
-    showLoader(true, 'Converting to PDF...');
-
-    // 5. Create PDF from images using pdf-lib
-    const pdfDoc = await PDFLib.PDFDocument.create();
-    for (const imageFile of imageFiles) {
-        const imageBytes = await imageFile.arrayBuffer();
-        let image;
-        try {
-            if (/\.png$/i.test(imageFile.name)) {
-                image = await pdfDoc.embedPng(imageBytes);
-            } else if (/\.gif$/i.test(imageFile.name)) {
-                // pdf-lib doesn't support GIF directly, would need conversion
-                console.warn(`Skipping unsupported image type: ${imageFile.name}`);
-                continue;
-            } else {
-                 image = await pdfDoc.embedJpg(imageBytes);
+        function findImageFiles(obj, path = '') {
+            let fileList = [];
+            for (const key in obj) {
+                const currentPath = path ? `${path}/${key}` : key;
+                const item = obj[key];
+                if (/\.(jpe?g|png|gif|webp)$/i.test(key)) {
+                    fileList.push({ file: item, fullPath: currentPath });
+                } else if (item && typeof item === 'object' && !item.extract) {
+                    fileList = fileList.concat(findImageFiles(item, currentPath));
+                }
             }
-        } catch(e) {
-            console.error(`Failed to embed image ${imageFile.name}:`, e);
-            console.warn(`Attempting to embed as JPG as a fallback.`);
-            try {
-              image = await pdfDoc.embedJpg(imageBytes);
-            } catch (e2) {
-              console.error(`Fallback failed for ${imageFile.name}:`, e2);
-              continue;
-            }
+            return fileList;
         }
+
+        const imageFiles = findImageFiles(files)
+            .sort((a, b) => a.fullPath.localeCompare(b.fullPath, undefined, { numeric: true, sensitivity: 'base' }));
+
+        if (imageFiles.length === 0) {
+            throw new Error('No images found in the archive.');
+        }
+
+        showLoader(true, 'Loading images...');
+
+        // Convert image files to Object URLs and store them
+        for (const imageContainer of imageFiles) {
+            const imageFile = imageContainer.file;
+            // The 'File' object from the library is a Blob, so we can create an Object URL directly.
+            state.comicPages.push(URL.createObjectURL(imageFile));
+        }
+
+        // Finish initialization for comic mode
+        state.totalPages = state.comicPages.length;
+        DOM.pageCount.textContent = `/ ${state.totalPages}`;
+        DOM.pageNumberInput.max = state.totalPages;
+        DOM.loadingMessage.style.display = 'none';
+        showLoader(false);
         
-        const page = pdfDoc.addPage([image.width, image.height]);
-        page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+        // Initial render
+        await render();
+
+    } catch (extractionError) {
+        // We are keeping this to catch any unexpected errors during the process.
+        console.error('A critical error occurred during archive handling:', extractionError);
+        DOM.loadingMessage.textContent = `Error: ${extractionError.message}`;
+        showLoader(false);
+        throw extractionError;
     }
-
-    const pdfBytes = await pdfDoc.save();
-
-    // 6. Load the generated PDF into PDF.js
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
-    const pdf = await loadingTask.promise;
-    await finishInitialization(pdf);
 }
 
 /**
  * Navigates to a specific page.
  * @param {number | 'first' | 'last'} pageTarget The page number to go to.
  */
-function goToPage(pageTarget) {
+async function goToPage(pageTarget) {
     let newPage;
     if (pageTarget === 'first') {
         newPage = 1;
@@ -960,45 +1030,70 @@ function goToPage(pageTarget) {
         newPage = pageTarget;
     }
 
-    if (newPage >= 1 && newPage <= state.totalPages) {
+    // Clamp the page number to be within bounds.
+    if (newPage < 1) newPage = 1;
+    if (newPage > state.totalPages) newPage = state.totalPages;
+
+    if (newPage >= 1 && newPage <= state.totalPages && newPage !== state.currentPage) {
+        
+        const needsAnimation = state.isComicMode || !state.isContinuousView;
+        
+        if (needsAnimation) {
+            DOM.container.classList.add('page-changing');
+            await new Promise(resolve => setTimeout(resolve, 150)); // Match transition time
+        }
+
         updateCurrentPage(newPage);
-        if (!state.isContinuousView) {
-            render();
+        
+        if (state.isComicMode || !state.isContinuousView) {
+            await render();
         } else {
             document.getElementById(`page-container-${newPage}`)?.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        if (needsAnimation) {
+            DOM.container.classList.remove('page-changing');
         }
     }
 }
 
-function handlePageNavigation(direction) {
+/**
+ * Handles page navigation from user input.
+ * @param {number} direction - The direction to navigate (-1 for back, 1 for forward).
+ */
+async function handlePageNavigation(direction) {
     let newPage;
+    const navDirection = state.readingDirection === 'rtl' ? -direction : direction;
+
     if (state.spreadMode !== 'none' && !state.isContinuousView) {
         const isOddSpread = state.spreadMode === 'odd';
         const currentPage = state.currentPage;
 
-        // Handle special case for page 1 in odd spread mode
-        if (isOddSpread && currentPage === 1 && direction === 1) {
-            newPage = 2;
-        } else if (isOddSpread && (currentPage === 2 || currentPage === 3) && direction === -1) {
-            // Handle going back to page 1 from the first spread
-            newPage = 1;
-        } else {
-            // In spread/book mode, we jump by 2 pages
-            const jump = direction * 2;
-            let currentSpreadStart;
-            if (isOddSpread) {
-                 // Spreads start on even pages (2, 4, 6...)
-                currentSpreadStart = (currentPage % 2 === 0) ? currentPage : currentPage - 1;
-            } else { // even spread
-                // Spreads start on odd pages (1, 3, 5...)
-                currentSpreadStart = (currentPage % 2 !== 0) ? currentPage : currentPage - 1;
+        // Find the starting page of the current spread for a consistent jump-off point.
+        let currentSpreadStart;
+        if (isOddSpread) { // Spreads are (2,3), (4,5)... page 1 is alone.
+            currentSpreadStart = (currentPage === 1) ? 1 : (currentPage % 2 === 0 ? currentPage : currentPage - 1);
+        } else { // Spreads are (1,2), (3,4)...
+            currentSpreadStart = (currentPage % 2 === 1) ? currentPage : currentPage - 1;
+        }
+
+        // Jump two pages from the start of the spread.
+        newPage = currentSpreadStart + (navDirection * 2);
+
+        // Handle the unique case of moving to/from the single page 1 in odd-spread mode.
+        if (isOddSpread) {
+            if (currentSpreadStart >= 2 && newPage < 2) {
+                newPage = 1; // Moving back to page 1.
+            } else if (currentSpreadStart === 1 && navDirection === 1) {
+                newPage = 2; // Moving from page 1 to the first spread.
             }
-            newPage = currentSpreadStart + jump;
         }
     } else {
-        newPage = state.currentPage + direction;
+        // Single page mode (or continuous scroll).
+        newPage = state.currentPage + navDirection;
     }
-    goToPage(newPage);
+
+    await goToPage(newPage);
 }
 
 /**
@@ -1006,6 +1101,21 @@ function handlePageNavigation(direction) {
  * @param {number | 'in' | 'out'} direction - The new zoom level or direction ('in'/'out').
  */
 function handleZoom(direction) {
+    if (state.isComicMode) {
+        let newZoom;
+        if (typeof direction === 'number') {
+            newZoom = direction;
+        } else {
+            const increment = direction === 'in' ? ZOOM_INCREMENT : -ZOOM_INCREMENT;
+            newZoom = state.comicZoomLevel + increment; 
+        }
+        state.comicZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+        DOM.container.style.transform = `scale(${state.comicZoomLevel})`;
+        state.zoomMode = 'percentage';
+        updateZoomDisplay();
+        return;
+    }
+
     let newZoom;
     if (typeof direction === 'number') {
         newZoom = direction;
@@ -1036,29 +1146,36 @@ async function togglePresentationMode() {
         state.prePresentationState = {
             spreadMode: state.spreadMode,
             isContinuousView: state.isContinuousView,
+            zoomMode: state.zoomMode,
+            zoomLevel: state.zoomLevel,
         };
 
         // For presentation mode, use the current spread setting but disable continuous scroll.
         state.isContinuousView = false;
         DOM.viewModeToggle.checked = false; // Reflect state in UI
 
-        await render();
-
+        // The actual render and zoom calculation will be triggered by the fullscreenchange event
         if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen().catch(err => {
                 console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
             });
+        } else {
+             // Fallback for browsers that don't support the API
+            await setZoomMode('fit');
         }
     } else {
         // Restore previous view settings
         if (state.prePresentationState) {
             state.spreadMode = state.prePresentationState.spreadMode;
             state.isContinuousView = state.prePresentationState.isContinuousView;
+            state.zoomMode = state.prePresentationState.zoomMode;
+            state.zoomLevel = state.prePresentationState.zoomLevel;
             state.prePresentationState = null;
             DOM.viewModeToggle.checked = state.isContinuousView; // Reflect state in UI
         }
 
-        await render();
+        await render(); // Re-render with restored settings
+        updateZoomDisplay();
         
         if (document.exitFullscreen && document.fullscreenElement) {
             document.exitFullscreen();
@@ -1132,7 +1249,8 @@ function handleWheel(e) {
     if (e.ctrlKey) {
         e.preventDefault();
         const delta = -Math.sign(e.deltaY); // Invert direction for natural scroll zoom
-        const newZoom = state.zoomLevel + delta * ZOOM_INCREMENT;
+        const currentZoom = state.isComicMode ? state.comicZoomLevel : state.zoomLevel;
+        const newZoom = currentZoom + delta * ZOOM_INCREMENT;
         handleZoom(newZoom);
     } else if (state.isContinuousView) { // This logic now runs for both horizontal and vertical continuous scroll
         e.preventDefault();
@@ -1313,6 +1431,7 @@ function updatePageOnScroll() {
  */
 function updateZoomDisplay() {
     let text;
+    const zoomLevel = state.isComicMode ? state.comicZoomLevel : state.zoomLevel;
     switch (state.zoomMode) {
         case 'auto':
             text = 'Automatic Zoom';
@@ -1327,7 +1446,7 @@ function updateZoomDisplay() {
             text = 'Page Width';
             break;
         default:
-            text = `${Math.round(state.zoomLevel * 100)}%`;
+            text = `${Math.round(zoomLevel * 100)}%`;
             break;
     }
     DOM.zoomLevelInput.value = text;
@@ -1340,6 +1459,28 @@ function updateZoomDisplay() {
  */
 async function setZoomMode(mode) {
     state.zoomMode = mode;
+
+    if (state.isComicMode) {
+        DOM.container.style.transform = 'scale(1)';
+        state.comicZoomLevel = 1.0;
+        // For comic mode, zoom is handled by CSS classes on the container
+        DOM.container.classList.remove('zoom-fit', 'zoom-width', 'zoom-actual');
+        switch (mode) {
+            case 'fit':
+            case 'auto':
+                DOM.container.classList.add('zoom-fit');
+                break;
+            case 'width':
+                DOM.container.classList.add('zoom-width');
+                break;
+            case 'actual':
+                 DOM.container.classList.add('zoom-actual');
+                break;
+        }
+        updateZoomDisplay();
+        return; // No need to re-render, CSS handles it
+    }
+
     let newScale = state.zoomLevel;
 
     if (!state.pdfDoc) return;
@@ -1484,6 +1625,40 @@ function initEventListeners() {
     DOM.spreadOddBtn.addEventListener('click', () => setSpreadMode('odd'));
     DOM.spreadEvenBtn.addEventListener('click', () => setSpreadMode('even'));
 
+    DOM.comicModeBtn.addEventListener('click', async () => {
+        state.readingDirection = 'ltr';
+        DOM.comicModeBtn.classList.add('active');
+        DOM.mangaModeBtn.classList.remove('active');
+        DOM.container.classList.remove('manga-mode');
+        
+        // Apply comic-specific settings
+        DOM.invertScrollToggle.checked = false;
+        state.invertScroll = false;
+        setSpreadMode('even');
+        setZoomMode('fit');
+
+        if (!state.isPresentationMode) {
+            await togglePresentationMode();
+        }
+    });
+
+    DOM.mangaModeBtn.addEventListener('click', async () => {
+        state.readingDirection = 'rtl';
+        DOM.mangaModeBtn.classList.add('active');
+        DOM.comicModeBtn.classList.remove('active');
+        DOM.container.classList.add('manga-mode');
+
+        // Apply manga-specific settings
+        DOM.invertScrollToggle.checked = true;
+        state.invertScroll = true;
+        setSpreadMode('even');
+        setZoomMode('fit');
+
+        if (!state.isPresentationMode) {
+            await togglePresentationMode();
+        }
+    });
+
     DOM.presentationModeBtn.addEventListener('click', togglePresentationMode);
     
     // Tool Buttons
@@ -1568,8 +1743,11 @@ function initEventListeners() {
     document.addEventListener('keydown', handleKeydown);
     window.addEventListener('wheel', handleWheel, { passive: false });
     document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement && state.isPresentationMode) {
-            // Exited fullscreen via other means (e.g., Esc key), so update state
+        if (document.fullscreenElement && state.isPresentationMode) {
+            // We've entered fullscreen, so now it's safe to calculate zoom and render.
+            setZoomMode('fit');
+        } else if (!document.fullscreenElement && state.isPresentationMode) {
+            // Exited fullscreen via other means (e.g., Esc key), so update our state.
             togglePresentationMode();
         }
     });
@@ -1634,7 +1812,7 @@ function initEventListeners() {
                         clearTimeout(state.pencil.shapeCorrectionTimeout);
                         state.pencil.shapeCorrectionTimeout = setTimeout(() => {
                             correctShapeAfterDelay(pageDiv, pageNum);
-                        }, 4000);
+                        }, 2500);
                     }
                 }
             } else if (state.isHandToolActive) {
@@ -2048,7 +2226,7 @@ function initEventListeners() {
                 currentPath = null;
                 clearTimeout(state.pencil.shapeCorrectionTimeout);
 
-            }, 4000);
+            }, 2500);
         }
     });
 

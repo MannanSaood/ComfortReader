@@ -48,18 +48,19 @@ chrome.webRequest.onBeforeRequest.addListener( // <-- Using onBeforeRequest
 
     // Only proceed if it's a main_frame navigation and not already our viewer
     if (details.type === 'main_frame' && details.tabId !== -1 && !details.url.startsWith(extensionViewerUrl)) {
-      const isPdfByUrlExtension = details.url.toLowerCase().endsWith('.pdf');
+      const lowerUrl = details.url.toLowerCase();
+      const isSupportedFile = lowerUrl.endsWith('.pdf') || lowerUrl.endsWith('.cbr') || lowerUrl.endsWith('.cbz');
 
-      console.log('Is PDF by URL Extension (.pdf) (File):', isPdfByUrlExtension);
+      console.log('Is Supported File by Extension (File):', isSupportedFile);
 
-      if (isPdfByUrlExtension) {
-        console.log('✅ PDF detected by URL Extension (File):', details.url);
+      if (isSupportedFile) {
+        console.log('✅ Supported file detected by URL Extension (File):', details.url);
         const viewerUrl = extensionViewerUrl + '?file=' + encodeURIComponent(details.url);
         chrome.tabs.update(details.tabId, { url: viewerUrl })
           .then(() => console.log(`➡️ Successfully initiated redirect (File) of tab ${details.tabId} to ${viewerUrl}`))
           .catch(error => console.error(`❌ Error redirecting (File) tab ${details.tabId}:`, error));
       } else {
-        console.log('ℹ️ Not identified as a PDF by URL Extension (File).');
+        console.log('ℹ️ Not identified as a supported file by URL Extension (File).');
       }
     } else {
       console.log('➡️ Skipping (File) (Not main_frame, no tab ID, or already viewer URL).');
@@ -67,7 +68,7 @@ chrome.webRequest.onBeforeRequest.addListener( // <-- Using onBeforeRequest
     console.groupEnd();
   },
   {
-    urls: ["file://*/*.pdf"], // Specifically listen for .pdf files in file:// scheme
+    urls: ["file://*/*.pdf", "file://*/*.cbr", "file://*/*.cbz"], // Specifically listen for .pdf files in file:// scheme
     types: ["main_frame"]
   },
   [] // No extraInfoSpec needed for onBeforeRequest unless using "blocking"

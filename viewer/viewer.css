@@ -1,5 +1,43 @@
 /* viewer/viewer.css */
 
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    color: white;
+    font-family: sans-serif;
+    cursor: progress;
+}
+
+.loading-spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1.5s linear infinite;
+    margin-bottom: 20px;
+}
+
+.loading-text {
+    font-size: 1.2em;
+    letter-spacing: 1px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 :root {
     /* Colors */
     --background-color: #f0f0f0;
@@ -26,6 +64,7 @@
     --sidebar-width: 160px;
     --canvas-bottom-margin: 24px;
     --border-radius: 4px;
+    --outer-padding: 32px; /* Padding for the main content area */
 
     /* Transitions */
     --transition-fast: 0.2s ease-in-out;
@@ -56,10 +95,39 @@ body, html {
     height: 100%;
     margin-left: var(--sidebar-width);
     transition: margin-left 0.25s;
+    position: relative; /* This is crucial for positioning the selection layer */
+
+    /* Center content (single pages, spreads, continuous view pages) */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 body.sidebar-collapsed #pdf-container {
     margin-left: 0;
+}
+
+#pdf-container.continuous-view {
+    padding: var(--outer-padding);
+    box-sizing: border-box; /* Ensures padding is included in the element's total width and height */
+}
+
+#pdf-container.horizontal-view {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: calc(100% - 40px); /* Adjust for top bar */
+}
+
+#pdf-container.horizontal-view .page-container {
+    margin-right: 1rem;
+    margin-bottom: 0;
+}
+
+#pdf-container.horizontal-view .spread-container {
+    margin-right: 1rem;
+    margin-bottom: 0;
 }
 
 canvas {
@@ -153,13 +221,43 @@ canvas {
   padding: 4px 0;
 }
 
+.toolbar-input {
+    width: 60px;
+    background: var(--input-bg-color);
+    border: 1px solid var(--input-border-color);
+    color: var(--text-color-light);
+    text-align: center;
+    border-radius: var(--border-radius);
+    padding: 4px 2px;
+    margin-left: -12px; /* Pull closer to the zoom out button */
+}
+
+.zoom-input-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--input-bg-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--input-border-color);
+    padding-left: 6px;
+}
+
+.zoom-input-container .toolbar-input {
+    border: none; /* The container has the border now */
+    margin: 0;
+}
+
+#zoom-level-btn {
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
 #zoom-level {
   font-weight: 500;
   width: 50px;
   text-align: center;
 }
 
-/* Custom Toggle Switch */
+/* Corrected Custom Toggle Switch */
 .toggle-control {
   display: flex;
   align-items: center;
@@ -170,19 +268,21 @@ canvas {
 .toggle-control .label-text {
   font-size: 0.9em;
   font-weight: 500;
-  color: #ccc;
+  color: var(--top-bar-text-color);
+  user-select: none;
 }
 
 .toggle-control input[type="checkbox"] {
-  position: relative;
-  width: 38px;
-  height: 20px;
-  -webkit-appearance: none;
   appearance: none;
-  background: var(--toggle-bg-color);
+  -webkit-appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background-color: var(--toggle-bg-color);
   border-radius: 20px;
-  transition: background-color var(--transition-fast);
+  transition: background-color 0.3s;
   cursor: pointer;
+  outline: none;
 }
 
 .toggle-control input[type="checkbox"]::before {
@@ -194,67 +294,105 @@ canvas {
   top: 2px;
   left: 2px;
   background: var(--toggle-handle-color);
-  transition: transform var(--transition-fast);
+  transition: transform 0.3s ease;
 }
 
 .toggle-control input[type="checkbox"]:checked {
-  background: var(--toggle-bg-checked-color);
+  background-color: var(--toggle-bg-checked-color);
 }
 
 .toggle-control input[type="checkbox"]:checked::before {
-  transform: translateX(18px);
+  transform: translateX(16px);
 }
 
 /* Sidebar */
 #sidebar-preview {
-  height: 100%;
-  width: var(--sidebar-width);
-  background: var(--sidebar-bg-color);
-  z-index: 20;
-  transition: width 0.25s cubic-bezier(.4,2,.6,1), box-shadow 0.2s;
-  overflow-x: hidden;
-  overflow-y: auto;
-  box-shadow: 2px 0 8px var(--box-shadow-color);
+  position: fixed;
+    top: var(--top-bar-height);
+  left: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    background-color: transparent; /* Use a semi-transparent color */
+    backdrop-filter: blur(30px); /* This creates the frosted glass effect */
+    border-right: 2px solid var(--top-bar-border-color);
+    
+    z-index: 10;
+    transform: translateX(0);
+    transition: transform 0.25s;
+    overflow-y: auto; /* This will enable scrolling when content overflows */
 }
 
 body.sidebar-collapsed #sidebar-preview {
-  width: 0;
-  min-width: 0;
+    transform: translateX(calc(-1 * var(--sidebar-width)));
 }
 
-body.sidebar-collapsed #sidebar-content {
-  display: none;
+/* New container for each thumbnail and its page number */
+.sidebar-thumb-container {
+    margin: 20px auto; /* Increased margin for spacing */
+    cursor: pointer;
+    width: calc(var(--sidebar-width) - 40px);
+    position: relative; /* Needed for absolute positioning of the number */
+    opacity: 0.7; /* Inactive pages are slightly transparent */
+    transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border-radius: 4px; /* Rounded corners for the container */
+    box-shadow: 0 0 8px rgba(123, 92, 255, 0.15); /* Subtle purple glow for all */
 }
 
-#sidebar-content {
-  padding: 12px 4px;
+.sidebar-thumb-container:hover {
+    opacity: 0.9;
+}
+
+.sidebar-thumb-container.selected {
+    opacity: 1; /* Active page is fully opaque */
+    box-shadow: 0 0 16px rgba(123, 92, 255, 0.5); /* Prominent purple glow */
+}
+
+.sidebar-thumb-container.selected .sidebar-thumb {
+    border-color: var(--sidebar-thumb-border-color);
+    /* The main glow is now on the container, so we remove it from here */
 }
 
 .sidebar-thumb {
-  width: 120px;
-  height: 70px;
-  margin: 8px auto;
-  display: block;
-  border-radius: var(--border-radius);
-  box-shadow: 0 1px 4px #0002;
-  cursor: pointer;
-  border: 2px solid transparent;
-  background: #fff;
-  transition: border var(--transition-fast), filter var(--transition-fast), opacity var(--transition-fast);
-  filter: grayscale(80%);
-  opacity: 0.7;
+    border: 2px solid transparent; /* Moved border from container to here */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    border-radius: 2px;
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
-.sidebar-thumb.selected {
-  border-color: var(--sidebar-thumb-border-color);
-  filter: none;
-  opacity: 1;
+/* New style for the page number text */
+.sidebar-thumb-number {
+    position: absolute;
+    bottom: 0; /* Position it to overlap the bottom edge */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px; /* Set a fixed width */
+    height: 28px; /* Set a fixed height */
+    border-radius: 50%; /* Make it a circle */
+    background-color: #2c2c2c79;
+    border: 1px solid #555;
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    user-select: none;
+    pointer-events: none; /* Prevent the number from intercepting clicks */
+    display: flex; /* Use flexbox to center the number inside the circle */
+    align-items: center;
+    justify-content: center;
+    z-index: 1; /* Ensure number is on top of the canvas */
 }
 
-/* Page Container for single-page view */
 .page-container {
-    margin: 0 auto var(--canvas-bottom-margin) auto;
-    width: fit-content;
+    margin-bottom: var(--canvas-bottom-margin);
+}
+
+.spread-container {
+    display: flex;
+    justify-content: center;
+    gap: 2rem; /* Increased from 1rem for a more visible separation */
+    margin-bottom: 1rem;
 }
 
 /* Dropdown Menu */
@@ -298,6 +436,12 @@ body.sidebar-collapsed #sidebar-content {
   background-color: var(--dropdown-hover-bg-color);
 }
 
+.dropdown-separator {
+    height: 1px;
+    background-color: var(--dropdown-border-color);
+    margin: 5px 0;
+}
+
 /* --- Responsive Design --- */
 
 /* For tablets and smaller desktops */
@@ -335,8 +479,241 @@ body.sidebar-collapsed #sidebar-content {
   .page-controls input {
     width: 35px;
   }
-  
   #top-bar {
     padding: 0 8px;
   }
+}
+
+body.presentation-mode #top-bar,
+body.presentation-mode #sidebar-preview {
+    display: none;
+}
+
+body.presentation-mode #viewer-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 100vw;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+}
+
+body.presentation-mode #pdf-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin-left: 0; /* Override default margin */
+    transition: none; /* Disable transition during presentation mode */
+    overflow: visible; /* Let the inner content determine size */
+    width: auto;
+    height: auto;
+    max-width: 95vw;  /* Ensure it doesn't exceed screen width */
+    max-height: 95vh; /* Ensure it doesn't exceed screen height */
+    display: flex; /* This helps center the spread-container within */
+    justify-content: center;
+    align-items: center;
+}
+
+body.presentation-mode .page,
+body.presentation-mode .spread-container {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    margin-bottom: 0; /* Remove default margin */
+}
+
+/* Hide any modals that might be open */
+body.presentation-mode .modal-overlay {
+    display: none;
+}
+
+/* Hide the close button on the properties modal when in presentation mode */
+body.presentation-mode #doc-properties-close-btn {
+    display: none;
+}
+
+body.presentation-mode #doc-properties-close-btn:hover {
+    background-color: #555;
+}
+
+.page {
+    position: relative;
+}
+
+.textLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    line-height: 1;
+}
+
+
+.textLayer > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+}
+
+.textLayer ::selection {
+    background: rgba(0, 100, 255, 0.4);
+}
+
+body.hand-tool-active .textLayer {
+    display: none;
+}
+
+body.hand-tool-active #pdf-container {
+    cursor:grab;
+}
+
+body.hand-tool-active #pdf-container.grabbing {
+    cursor: grabbing;
+}
+
+.annotationLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: tan;
+    pointer-events: none;
+}
+
+body.highlighter-active #pdf-container {
+    cursor: crosshair;
+}
+
+#highlighter-tool-btn.active,
+#pencil-tool-btn.active,
+#text-tool-btn.active,
+#image-tool-btn.active,
+#signature-tool-btn.active,
+#eraser-tool-btn.active {
+    background-color: var(--button-active-bg);
+}
+
+body.pencil-active #pdf-container {
+    cursor: crosshair;
+}
+
+body.text-active #pdf-container {
+    cursor: text;
+}
+
+body.image-active #pdf-container {
+    cursor: crosshair;
+}
+
+body.signature-active #pdf-container {
+    cursor: crosshair;
+}
+
+body.eraser-active #pdf-container {
+    cursor: crosshair;
+}
+
+body.grabbing-annotation #pdf-container {
+    cursor: grabbing;
+}
+
+.temp-textbox-selection {
+    position: fixed;
+    border: 1px dashed rgba(0, 123, 255, 0.9);
+    background-color: rgba(0, 123, 255, 0.1);
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* --- Modal Styles --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: var(--bg-color);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+#signature-canvas {
+    border: 1px solid var(--border-color);
+    cursor: crosshair;
+}
+
+.modal-actions {
+    margin-top: 15px;
+}
+
+.modal-actions button {
+    margin: 0 5px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.modal-actions button:hover {
+    background-color: var(--button-hover-bg);
+}
+
+.toolbar-btn-dropdown {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    text-align: left;
+    cursor: pointer;
+}
+
+.toolbar-btn-dropdown:hover {
+    background-color: var(--button-hover-bg);
+}
+
+.toolbar-btn-dropdown.active {
+    background-color: var(--button-active-bg);
+}
+
+.dropdown-submenu {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.properties-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 16px;
+    text-align: left;
+    margin: 20px 0;
+}
+
+.properties-grid > span:nth-child(odd) {
+    font-weight: bold;
+}
+
+.toolbar-group .icon-btn i {
+    font-size: 1.1em;
+}
+
+/* --- Dropdown Styles --- */
+.dropdown {
+    position: relative;
+    display: inline-block;
 }

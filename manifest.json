@@ -3,7 +3,11 @@
   "name": "ComfortReader",
   "version": "1.0",
   "description": "A browser extension to view PDFs with enhanced comfort and accessibility features.",
-  "permissions": ["storage", "tabs", "webRequest"],
+  "permissions": [
+      "storage",
+      "activeTab",
+      "webRequest"
+  ],
   "host_permissions": ["<all_urls>"],
   "icons": {
       "16": "icons/ComfortReaderIcon.png",
@@ -11,18 +15,23 @@
       "128": "icons/ComfortReaderIcon.png"
   },
   "background": {
-      "service_worker": "background.js"
+    "service_worker": "background.js"
   },
   "action": {
     "default_popup": "options/options.html"
   },
   "options_page": "options/options.html",
-  "web_accessible_resources": [
-      {
-          "resources": ["viewer/viewer.html"],
-          "matches": ["<all_urls>"]
-      }
-  ],
+  "web_accessible_resources": [{
+      "resources": [
+          "viewer/viewer.html",
+          "viewer/viewer.css",
+          "viewer/viewer.js",
+          "viewer/pdfjs/pdf.mjs",
+          "viewer/pdfjs/pdf.worker.mjs",
+          "viewer/lib/jspdf.umd.min.js"
+      ],
+      "matches": ["<all_urls>"]
+  }],
   "content_security_policy": {
       "extension_pages": "script-src 'self'; style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://cdnjs.cloudflare.com; child-src 'self' blob:;"
   }

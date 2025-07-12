@@ -215,35 +215,35 @@ document.addEventListener('DOMContentLoaded', () => {
         // Filters
         DOM.blueLightFilterToggle.addEventListener('change', () => {
             DOM.blueLightIntensitySlider.disabled = !DOM.blueLightFilterToggle.checked;
-            saveSettings();
-        });
+        saveSettings();
+    });
 
         DOM.blueLightIntensitySlider.addEventListener('input', () => {
             DOM.blueLightIntensityValue.textContent = `${DOM.blueLightIntensitySlider.value}%`;
-            saveSettings();
-        });
+        saveSettings();
+    });
 
         DOM.contrastLevelSlider.addEventListener('input', () => {
             DOM.contrastLevelValue.textContent = `${DOM.contrastLevelSlider.value}%`;
-            saveSettings();
-        });
+        saveSettings();
+    });
 
         // Scope
         [DOM.applyAllRadio, DOM.applySelectedRadio].forEach(radio => {
             radio.addEventListener('change', () => {
                 DOM.siteListContainer.style.display = DOM.applySelectedRadio.checked ? 'block' : 'none';
-                saveSettings();
+        saveSettings();
             });
-        });
+    });
 
-        // Site List
+    // Site List
         DOM.addSiteBtn.addEventListener('click', addSite);
         DOM.siteInput.addEventListener('keypress', e => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                addSite();
-            }
-        });
+            addSite();
+        }
+    });
     }
 
     // --- Initialization ---

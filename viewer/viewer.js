@@ -1812,7 +1812,7 @@ function initEventListeners() {
                         clearTimeout(state.pencil.shapeCorrectionTimeout);
                         state.pencil.shapeCorrectionTimeout = setTimeout(() => {
                             correctShapeAfterDelay(pageDiv, pageNum);
-                        }, 2500);
+                        }, 1500);
                     }
                 }
             } else if (state.isHandToolActive) {
@@ -2226,7 +2226,7 @@ function initEventListeners() {
                 currentPath = null;
                 clearTimeout(state.pencil.shapeCorrectionTimeout);
 
-            }, 2500);
+            }, 1500);
         }
     });
 

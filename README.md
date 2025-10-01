@@ -1,99 +1,153 @@
-ComfortReader
+ComfortRead - The Intelligent, All-in-One Document Reader
 
-ComfortReader is a feature-rich, comfort-focused PDF and Comic Book reader designed as a browser extension. It replaces the default browser viewer with a powerful, customizable interface that enhances reading productivity and reduces eye strain. It includes an extensive suite of annotation tools, advanced viewing modes, and unique features for comic book fans.
+ComfortRead is a modern, feature-rich browser extension designed to be the ultimate destination for reading, annotating, and collaborating on all your digital documents. Moving beyond simple file viewers, ComfortRead integrates a powerful, scalable architecture with plans for AI-powered insights, cloud synchronization, and real-time collaboration.
 
-## Key Features
+This project is currently undergoing a strategic migration from a vanilla JavaScript prototype to a robust application built with React and a feature-first architecture.
+Core Features
 
-Advanced Document Viewing
+Our goal is to create a seamless experience across all your documents.
+Viewing & Reading
 
-    Universal Support: Natively opens and renders PDF documents as well as comic book archives (.cbr, .cbz).
+    Multi-Format Support: Natively view PDF, EPUB, CBR, CBZ, Markdown (.md), and Plain Text (.txt) files.
 
-    Flexible Layouts:
+    High-Performance Rendering: Built with virtualization to ensure smooth scrolling and fast load times, even for documents with thousands of pages.
 
-        Single Page View: Focus on one page at a time.
+    Customizable Reader Theme: Adjust background colors, invert themes, and apply grayscale filters for maximum reading comfort.
 
-        Continuous Scrolling: Seamlessly scroll through the entire document.
+    Advanced Spread Modes: Intelligently displays single pages, double-page spreads, and manga (right-to-left) layouts.
 
-        Two-Page Spreads: View documents like an open book with "Odd" or "Even" spread modes.
+Annotations & Note-Taking
 
-    Horizontal View: Read in a horizontal scrolling layout.
+    Full Annotation Suite: A simple yet powerful set of tools including highlighting, free-form pencil drawing, text notes, and image insertions.
 
-    Thumbnail Sidebar: Quickly navigate through the document with a collapsible thumbnail preview panel.
+    Persistent & Portable: Annotations are saved and tied to the document, ready for future syncing and sharing.
 
-Comfort & Accessibility
+Future Vision & Roadmap
 
-    Custom Backgrounds: Change the background color to reduce glare. Includes presets like Sepia, Cream, Dark Gray, and a full custom color picker.
+    CYOWC (Carry Your Own Cloud): A local-first synchronization system using IndexedDB, with optional cloud backup and sync via Firebase Firestore. Your data is always available offline and securely synced when you're online.
 
-    Visual Filters:
+    Live Collaboration & Meet:
 
-        Invert Colors: A high-contrast dark mode for night reading.
+        Live Share: Real-time annotation, text editing, and presence/cursor sharing powered by Liveblocks.
 
-        Grayscale Mode: Remove all color for a simplified view.
+        Live Meet: Free, peer-to-peer video and audio calls integrated directly into the reader, powered by PeerJS and WebRTC.
 
-        Blue Light Filter: Reduce eye strain with an adjustable intensity slider.
+    AI-Powered Insights:
 
-        Contrast Control: Adjust the document's contrast for better readability.
+        Smart Summaries: Generate concise summaries of documents.
 
-    Persistent Settings: All your comfort settings can be saved and applied automatically to all PDFs or only to specific websites you choose.
+        Automated Note-Taking: Convert highlights into structured notes.
 
-Powerful Annotation Suite
+        Flashcard Generation: Automatically create study flashcards from your annotations.
 
-    Text-Aware Highlighting: The highlighter snaps to the document's text for clean, precise highlighting.
+    Personal Library: Organize your documents into a searchable, taggable personal library that syncs across your devices.
 
-    Pencil Tool: Draw freely on any page with adjustable color and size. Features experimental shape correction to automatically straighten lines and form circles.
+Tech Stack
 
-    Eraser: Easily remove parts of drawings or entire annotations.
+ComfortRead is built with a modern, scalable, and performant technology stack.
 
-    Text Box Tool: Add typed notes directly onto the PDF. Customize font, size, and color.
+Category
+	
 
-    Image & Signature: Insert images from your computer or draw and save a signature to place on documents.
+Technology
+	
 
-    Object Manipulation: Select, move, and resize text boxes and images after they've been placed.
+Purpose
 
-Dynamic View & Navigation
+Frontend
+	
 
-    Advanced Zoom: Control zoom level with presets, percentage input, or smart modes like "Page Fit" and "Page Width".
+React, Vite
+	
 
-    Page Rotation: Correct the orientation of scanned documents.
+Building a fast, component-based, and state-driven user interface.
 
-    Presentation Mode: A distraction-free, full-screen viewing mode.
+Styling
+	
 
-    Hand Tool: Pan and navigate around a zoomed-in page with ease.
+Tailwind CSS
+	
 
-Specialized Comic & Manga Modes
+Rapid, utility-first styling for a consistent and modern design.
 
-    Optimized for Comics: When a .cbr or .cbz file is opened, the reader automatically enables comic-friendly defaults.
+Document Engines
+	
 
-    Manga Mode: Instantly switches to a right-to-left (rtl) reading direction and inverts scroll for an authentic manga experience.
+PDF.js, EPUB.js, Marked
+	
 
-Export & Print
+Core rendering libraries for different document formats.
 
-    Download Options: Download the original, untouched PDF or a Modified PDF that includes all your annotations, highlights, and visual filter adjustments permanently embedded.
+CYOWC Sync
+	
 
-    Print Options: Print the original document or a modified version with your annotations directly from the viewer.
+IndexedDB, Firebase
+	
 
-Technologies Used
+Local-first storage with optional, secure cloud backup and sync.
 
-    Core: HTML5, CSS3, JavaScript (ES Modules)
+Live Collaboration
+	
 
-    PDF Rendering: 
+Liveblocks
+	
 
-    Comic Archive Extraction: 
+Real-time presence, cursor sharing, and conflict-free data types.
 
-    Modified PDF Generation: 
+Live Meet
+	
 
-    Platform: Chrome Browser Extension APIs
+PeerJS
+	
 
-How to Install (For Developers)
+Free, peer-to-peer WebRTC for video and audio communication.
+Project Structure
+
+The codebase is organized into a feature-first architecture, designed for scalability and easy maintenance.
+
+/src/
+|-- /components/
+|   |-- /ui/                # Generic, reusable UI elements
+|   |-- /layout/            # App structure (sidebars, top bar)
+|   `-- /viewer/            # Document rendering components
+|-- /features/
+|   |-- /annotations/       # Annotation logic and tools
+|   |-- /collaboration/     # Live share & meet features
+|   |-- /library/           # (Future) Document library
+|   `-- /ai/                # (Future) AI features
+|-- /hooks/                 # App-wide custom React hooks
+|-- /services/              # Connectors for external APIs (Firebase, Liveblocks)
+|-- /utils/                 # Helper functions
+|-- App.jsx                 # Main component that assembles the app
+`-- index.css               # Global styles
+
+Getting Started
+
+To get a local copy up and running, follow these simple steps.
+Prerequisites
+
+    Node.js (LTS version recommended)
+
+    npm (included with Node.js)
+
+Installation & Setup
 
     Clone the repository:
 
-    Open Chrome and navigate to chrome://extensions.
+    git clone [https://github.com/your-username/comfort-read.git](https://github.com/your-username/comfort-read.git)
+    cd comfort-read
 
-    Enable "Developer mode" using the toggle in the top-right corner.
+    Install NPM packages:
 
-    Click on the "Load unpacked" button.
+    npm install
 
-    Select the cloned ComfortReader directory.
+    Set Up Environment Variables:
+    Create a .env.local file in the root of the project and add your API keys obtained from the setup guide:
 
-The extension should now be active. It will automatically open when you navigate to a PDF file online or open a local one in your browser.
+    VITE_FIREBASE_CONFIG=your_firebase_config_object_here
+    VITE_LIVEBLOCKS_PUBLIC_KEY=pk_your_liveblocks_public_key_here
+
+    Run the Development Server:
+
+    npm run dev
+
